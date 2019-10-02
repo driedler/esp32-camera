@@ -730,8 +730,8 @@ static void IRAM_ATTR dma_filter_buffer(size_t buf_idx)
             }
         }
         //set the frame properties
-        s_state->fb->width = resolution[s_state->sensor.status.framesize][0];
-        s_state->fb->height = resolution[s_state->sensor.status.framesize][1];
+        s_state->fb->width = s_state->sensor.status.output_size[0];
+        s_state->fb->height = s_state->sensor.status.output_size[1];
         s_state->fb->format = s_state->sensor.pixformat;
     }
     s_state->dma_filtered_count++;
@@ -1068,8 +1068,19 @@ esp_err_t camera_init(const camera_config_t* config)
     esp_err_t err = ESP_OK;
     framesize_t frame_size = (framesize_t) config->frame_size;
     pixformat_t pix_format = (pixformat_t) config->pixel_format;
-    s_state->width = resolution[frame_size][0];
-    s_state->height = resolution[frame_size][1];
+
+
+    if(config->output_size[0] != 0 && config->output_size[1] != 0)
+    {
+        s_state->width = config->output_size[0];
+        s_state->height = config->output_size[1];
+    }
+    else
+    {
+        s_state->width = resolution[frame_size][0];
+        s_state->height = resolution[frame_size][1];
+    }
+
 
     if (pix_format == PIXFORMAT_GRAYSCALE) {
         s_state->fb_size = s_state->width * s_state->height;
@@ -1216,6 +1227,16 @@ esp_err_t camera_init(const camera_config_t* config)
         err = ESP_ERR_CAMERA_FAILED_TO_SET_FRAME_SIZE;
         goto fail;
     }
+
+    if(config->output_size[0] != 0 && config->output_size[1] != 0)
+    {
+        if (s_state->sensor.set_output_size(&s_state->sensor, config->output_size[0], config->output_size[1]) != 0) {
+            ESP_LOGE(TAG, "Failed to set output size");
+            err = ESP_ERR_CAMERA_FAILED_TO_SET_FRAME_SIZE;
+            goto fail;
+        }
+    }
+
     s_state->sensor.set_pixformat(&s_state->sensor, pix_format);
 
     if (s_state->sensor.id.PID == OV2640_PID) {

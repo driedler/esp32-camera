@@ -103,6 +103,7 @@ typedef struct {
     framesize_t frame_size;         /*!< Size of the output image: FRAMESIZE_ + QVGA|CIF|VGA|SVGA|XGA|SXGA|UXGA  */
 
     int jpeg_quality;               /*!< Quality of JPEG output. 0-63 lower means higher quality  */
+    uint16_t output_size[2];
     size_t fb_count;                /*!< Number of frame buffers to be allocated. If more than one, then each frame will be acquired (double speed)  */
 } camera_config_t;
 

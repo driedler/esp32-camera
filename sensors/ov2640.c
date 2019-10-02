@@ -156,9 +156,11 @@ int set_output_window(sensor_t *sensor, uint16_t x, uint16_t y, uint16_t width, 
 
     return ret;
 }
+#endif
+
 
 // Set the image output size (final output resolution)
-int set_output_size(sensor_t *sensor, uint16_t width, uint16_t height)
+static int set_output_size(sensor_t *sensor, uint16_t width, uint16_t height)
 {
     int ret = 0;
     uint16_t h, w;
@@ -169,6 +171,9 @@ int set_output_size(sensor_t *sensor, uint16_t width, uint16_t height)
     if(height % 4 ) {
         return -2;
     }
+
+    sensor->status.output_size[0] = width;
+    sensor->status.output_size[1] = height;
 
     w = width / 4;
     h = height / 4;
@@ -181,8 +186,9 @@ int set_output_size(sensor_t *sensor, uint16_t width, uint16_t height)
     return ret;
 }
 
+
 //Set the image window size >= output size
-int set_window_size(sensor_t *sensor, uint16_t x, uint16_t y, uint16_t width, uint16_t height)
+static int set_window_size(sensor_t *sensor, uint16_t x, uint16_t y, uint16_t width, uint16_t height)
 {
     int ret = 0;
     uint16_t w, h;
@@ -208,6 +214,52 @@ int set_window_size(sensor_t *sensor, uint16_t x, uint16_t y, uint16_t width, ui
     return ret;
 }
 
+static int set_zoom(sensor_t *sensor, int amount)
+{
+    int w_step, h_step, target_w, target_h;
+    const camera_status_t *status = &sensor->status;
+
+    const int res_w = resolution[status->framesize][0];
+    const int res_h = resolution[status->framesize][1];
+
+    const int out_w = status->output_size[0];
+    const int out_h = status->output_size[1];
+
+    if(out_h == out_w)
+    {
+        h_step = (res_h - out_h) / 9;
+
+        target_w = res_h - (((amount*h_step) >> 2) << 2);
+        target_h = res_h - (((amount*h_step) >> 2) << 2);
+    }
+    else
+    {
+        w_step = (res_w - out_w) / 9;
+        h_step = (res_h - out_h) / 9;
+
+        target_w = res_w - (((amount*w_step) >> 2) << 2);
+        target_h = res_h - (((amount*h_step) >> 2) << 2);
+    }
+
+    if(target_w < out_w || target_h < out_h)
+    {
+        target_w = out_w;
+    }
+    if(target_h < out_h)
+    {
+        target_h = out_h;
+     }
+
+    int err = set_window_size(sensor,
+                              res_w/2 - target_w/2,
+                              res_h/2 - target_h/2,  target_w, target_h);
+
+    return err;
+}
+
+
+#if 0
+
 //Set the sensor resolution (UXGA, SVGA, CIF)
 int set_image_size(sensor_t *sensor, uint16_t width, uint16_t height)
 {
@@ -230,6 +282,8 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
     const uint8_t (*regs)[2];
 
     sensor->status.framesize = framesize;
+    sensor->status.output_size[0] = resolution[framesize][0];
+    sensor->status.output_size[1] = resolution[framesize][1];
 
     if (framesize <= FRAMESIZE_CIF) {
         regs = ov2640_settings_to_cif;
@@ -558,6 +612,9 @@ int ov2640_init(sensor_t *sensor)
 
     sensor->set_raw_gma = set_raw_gma_dsp;
     sensor->set_lenc = set_lenc_dsp;
+
+    sensor->set_zoom = set_zoom;
+    sensor->set_output_size = set_output_size;
 
     //not supported
     sensor->set_sharpness = set_sharpness;

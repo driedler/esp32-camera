@@ -86,6 +86,7 @@ typedef struct {
     uint8_t vflip;
     uint8_t dcw;
     uint8_t colorbar;
+    uint16_t output_size[2];
 } camera_status_t;
 
 typedef struct _sensor sensor_t;
@@ -130,6 +131,9 @@ typedef struct _sensor {
 
     int  (*set_raw_gma)         (sensor_t *sensor, int enable);
     int  (*set_lenc)            (sensor_t *sensor, int enable);
+
+    int (*set_zoom)             (sensor_t *sensor, int amount);
+    int (*set_output_size)      (sensor_t *sensor, uint16_t width, uint16_t height);
 } sensor_t;
 
 // Resolution table (in camera.c)

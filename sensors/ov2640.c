@@ -282,8 +282,17 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
     const uint8_t (*regs)[2];
 
     sensor->status.framesize = framesize;
-    sensor->status.output_size[0] = resolution[framesize][0];
-    sensor->status.output_size[1] = resolution[framesize][1];
+    if(sensor->status.output_size[0] != 0 && sensor->status.output_size[1] != 0)
+    {
+        w = sensor->status.output_size[0];
+        h = sensor->status.output_size[1];
+    }
+    else
+    {
+        sensor->status.output_size[0] = w;
+        sensor->status.output_size[1] = h;
+    }
+
 
     if (framesize <= FRAMESIZE_CIF) {
         regs = ov2640_settings_to_cif;
@@ -304,6 +313,8 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
             WRITE_REG_OR_RETURN(BANK_SENSOR, CLKRC, CLKRC_2X_UXGA);
         }
     }
+
+
     WRITE_REG_OR_RETURN(BANK_DSP, ZMOW, (w>>2)&0xFF); // OUTW[7:0] (real/4)
     WRITE_REG_OR_RETURN(BANK_DSP, ZMOH, (h>>2)&0xFF); // OUTH[7:0] (real/4)
     WRITE_REG_OR_RETURN(BANK_DSP, ZMHH, ((h>>8)&0x04)|((w>>10)&0x03)); // OUTH[8]/OUTW[9:8]

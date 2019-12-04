@@ -1219,6 +1219,8 @@ esp_err_t camera_init(const camera_config_t* config)
         goto fail;
     }
 
+    s_state->sensor.status.output_size[0] = s_state->width;
+    s_state->sensor.status.output_size[1] = s_state->height;
     s_state->sensor.status.framesize = frame_size;
     s_state->sensor.pixformat = pix_format;
     ESP_LOGD(TAG, "Setting frame size to %dx%d", s_state->width, s_state->height);
@@ -1226,15 +1228,6 @@ esp_err_t camera_init(const camera_config_t* config)
         ESP_LOGE(TAG, "Failed to set frame size");
         err = ESP_ERR_CAMERA_FAILED_TO_SET_FRAME_SIZE;
         goto fail;
-    }
-
-    if(config->output_size[0] != 0 && config->output_size[1] != 0)
-    {
-        if (s_state->sensor.set_output_size(&s_state->sensor, config->output_size[0], config->output_size[1]) != 0) {
-            ESP_LOGE(TAG, "Failed to set output size");
-            err = ESP_ERR_CAMERA_FAILED_TO_SET_FRAME_SIZE;
-            goto fail;
-        }
     }
 
     s_state->sensor.set_pixformat(&s_state->sensor, pix_format);

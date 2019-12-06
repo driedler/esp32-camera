@@ -187,92 +187,74 @@ static int set_output_size(sensor_t *sensor, uint16_t width, uint16_t height)
 }
 
 
-//Set the image window size >= output size
-static int set_window_size(sensor_t *sensor, uint16_t x, uint16_t y, uint16_t width, uint16_t height)
+static int log_base2(int numerator, int denominator)
 {
-    int ret = 0;
-    uint16_t w, h;
+    const uint32_t tmp_div = numerator / denominator;
+    return (tmp_div < 2) ? 0 :
+           (tmp_div < 4) ? 1 :
+           (tmp_div < 8) ? 2 : 3;
+}
 
-    if(width % 4) {
-        return -1;
-    }
-    if(height % 4) {
-        return -2;
-    }
+#define MIN(a, b) ((a) < (b)) ?  (a) : (b)
+#define MAX(a, b) ((a) > (b)) ?  (a) : (b)
 
-    w = width / 4;
-    h = height / 4;
-    //WRITE_REG_OR_RETURN(BANK_DSP, RESET, RESET_DVP);
-    WRITE_REG_OR_RETURN(BANK_DSP, HSIZE, w & 0XFF);
-    WRITE_REG_OR_RETURN(BANK_DSP, VSIZE, h & 0XFF);
-    WRITE_REG_OR_RETURN(BANK_DSP, XOFFL, x & 0XFF);
-    WRITE_REG_OR_RETURN(BANK_DSP, YOFFL, y & 0XFF);
-    WRITE_REG_OR_RETURN(BANK_DSP, VHYX, ((h >> 1) & 0X80) | ((y >> 4) & 0X70) | ((w >> 5) & 0X08) | ((x >> 8) & 0X07));
-    WRITE_REG_OR_RETURN(BANK_DSP, TEST, (w >> 2) & 0X80);
-    //WRITE_REG_OR_RETURN(BANK_DSP, RESET, 0X00);
+static int set_pan_zoom(sensor_t *sensor, int zoom, int hpan, int vpan)
+{
+    int ret;
+    const framesize_t framesize = sensor->status.framesize;
+    const uint32_t out_h = sensor->status.output_size[1];
+    const uint32_t sensor_w = (framesize <= FRAMESIZE_CIF)  ? CIF_WIDTH  :
+                              (framesize <= FRAMESIZE_SVGA) ? SVGA_WIDTH :
+                                                              UXGA_WIDTH;
+    const uint32_t sensor_h = (framesize <= FRAMESIZE_CIF)  ? CIF_HEIGHT  :
+                              (framesize <= FRAMESIZE_SVGA) ? SVGA_HEIGHT :
+                                                              UXGA_HEIGHT;
+
+
+    const int log_div = log_base2(sensor_h, out_h);
+    const int div = 1 << log_div;
+
+    const int sensor_max_scaled = ((sensor_h-1) >> log_div) & ~(div-1);
+    const int target_step = ((sensor_max_scaled - out_h) * 100) / 10;
+
+    int target_size = sensor_max_scaled - ((target_step * zoom) / 100);
+
+    target_size &= ~(4-1);
+
+
+    const uint16_t target_size_mul = target_size * div;
+
+    const int16_t x_off_diff = (sensor_w - target_size_mul);
+    const int16_t y_off_diff = (sensor_h - target_size_mul);
+    int16_t x_off = (x_off_diff * 100) / 2;
+    int16_t y_off = (y_off_diff * 100) / 2;
+
+    const int hpan_step = x_off / 5;
+    const int vpan_step = y_off / 5;
+
+    // Rotate 90 deg clockwise
+    int rot_hpan = vpan;
+    int rot_vpan = -hpan;
+
+    x_off = (x_off + rot_hpan * hpan_step) / 100;
+    y_off = (y_off + rot_vpan * vpan_step) / 100;
+
+    x_off = MIN(MAX(0, x_off), x_off_diff);
+    y_off = MIN(MAX(0, y_off), y_off_diff);
+
+    WRITE_REG_OR_RETURN(BANK_DSP, 0xFF,  0x00);
+    WRITE_REG_OR_RETURN(BANK_DSP, CTRLI, CTRLI_LP_DP | CTRLI_V_DIV_SET(log_div) | CTRLI_H_DIV_SET(log_div));
+    WRITE_REG_OR_RETURN(BANK_DSP, HSIZE, HSIZE_SET(target_size_mul));
+    WRITE_REG_OR_RETURN(BANK_DSP, VSIZE, VSIZE_SET(target_size_mul));
+    WRITE_REG_OR_RETURN(BANK_DSP, XOFFL, XOFFL_SET(x_off));
+    WRITE_REG_OR_RETURN(BANK_DSP, YOFFL, YOFFL_SET(y_off));
+    WRITE_REG_OR_RETURN(BANK_DSP, VHYX, VHYX_HSIZE_SET(target_size_mul) | VHYX_VSIZE_SET(target_size_mul) | VHYX_XOFF_SET(x_off) | VHYX_YOFF_SET(y_off));
+    WRITE_REG_OR_RETURN(BANK_DSP, TEST, TEST_HSIZE_SET(target_size_mul));
+    WRITE_REG_OR_RETURN(BANK_DSP, R_DVP_SP, div);
+    WRITE_REG_OR_RETURN(BANK_DSP, RESET, 0X00);
 
     return ret;
 }
-
-static int set_zoom(sensor_t *sensor, int amount)
-{
-    int w_step, h_step, target_w, target_h;
-    const camera_status_t *status = &sensor->status;
-
-    const int res_w = resolution[status->framesize][0];
-    const int res_h = resolution[status->framesize][1];
-
-    const int out_w = status->output_size[0];
-    const int out_h = status->output_size[1];
-
-    if(out_h == out_w)
-    {
-        h_step = (res_h - out_h) / 9;
-
-        target_w = res_h - (((amount*h_step) >> 2) << 2);
-        target_h = res_h - (((amount*h_step) >> 2) << 2);
-    }
-    else
-    {
-        w_step = (res_w - out_w) / 9;
-        h_step = (res_h - out_h) / 9;
-
-        target_w = res_w - (((amount*w_step) >> 2) << 2);
-        target_h = res_h - (((amount*h_step) >> 2) << 2);
-    }
-
-    if(target_w < out_w || target_h < out_h)
-    {
-        target_w = out_w;
-    }
-    if(target_h < out_h)
-    {
-        target_h = out_h;
-     }
-
-    int err = set_window_size(sensor,
-                              res_w/2 - target_w/2,
-                              res_h/2 - target_h/2,  target_w, target_h);
-
-    return err;
-}
-
-
-#if 0
-
-//Set the sensor resolution (UXGA, SVGA, CIF)
-int set_image_size(sensor_t *sensor, uint16_t width, uint16_t height)
-{
-    int ret = 0;
-    //WRITE_REG_OR_RETURN(BANK_DSP, RESET, RESET_DVP);
-    WRITE_REG_OR_RETURN(BANK_DSP, HSIZE8, (width >> 3) & 0XFF);
-    WRITE_REG_OR_RETURN(BANK_DSP, VSIZE8, (height >> 3) & 0XFF);
-    WRITE_REG_OR_RETURN(BANK_DSP, SIZEL, ((width & 0X07) << 3) | ((width >> 4) & 0X80) | (height & 0X07));
-    //WRITE_REG_OR_RETURN(BANK_DSP, RESET, 0X00);
-
-    return ret;
-}
-#endif
 
 static int set_framesize(sensor_t *sensor, framesize_t framesize)
 {
@@ -624,7 +606,7 @@ int ov2640_init(sensor_t *sensor)
     sensor->set_raw_gma = set_raw_gma_dsp;
     sensor->set_lenc = set_lenc_dsp;
 
-    sensor->set_zoom = set_zoom;
+    sensor->set_pan_zoom = set_pan_zoom;
     sensor->set_output_size = set_output_size;
 
     //not supported

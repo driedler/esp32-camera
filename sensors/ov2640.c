@@ -211,7 +211,7 @@ static int set_pan_zoom(sensor_t *sensor, int zoom, int hpan, int vpan)
                                                               UXGA_HEIGHT;
 
 
-    const int log_div = log_base2(sensor_h, out_h);
+    const int log_div = 1; // log_base2(sensor_h, out_h);
     const int div = 1 << log_div;
 
     const int sensor_max_scaled = ((sensor_h-1) >> log_div) & ~(div-1);
@@ -369,7 +369,7 @@ static int set_special_effect(sensor_t *sensor, int effect)
 static int set_wb_mode(sensor_t *sensor, int mode)
 {
     int ret=0;
-    if (mode < 0 || mode > NUM_WB_MODES) {
+    if (mode <= 0 || mode > NUM_WB_MODES) {
         return -1;
     }
     sensor->status.wb_mode = mode;

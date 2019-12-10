@@ -131,13 +131,13 @@ static void IRAM_ATTR vsync_isr(void* arg);
 static void IRAM_ATTR i2s_isr(void* arg);
 static esp_err_t dma_desc_init();
 static void dma_desc_deinit();
-static void dma_filter_task(void *pvParameters);
-static void dma_filter_grayscale(const dma_elem_t* src, lldesc_t* dma_desc, uint8_t* dst);
-static void dma_filter_grayscale_highspeed(const dma_elem_t* src, lldesc_t* dma_desc, uint8_t* dst);
-static void dma_filter_yuyv(const dma_elem_t* src, lldesc_t* dma_desc, uint8_t* dst);
-static void dma_filter_yuyv_highspeed(const dma_elem_t* src, lldesc_t* dma_desc, uint8_t* dst);
-static void dma_filter_jpeg(const dma_elem_t* src, lldesc_t* dma_desc, uint8_t* dst);
-static void i2s_stop(bool* need_yield);
+static void IRAM_ATTR dma_filter_task(void *pvParameters);
+static void IRAM_ATTR dma_filter_grayscale(const dma_elem_t* src, lldesc_t* dma_desc, uint8_t* dst);
+static void IRAM_ATTR dma_filter_grayscale_highspeed(const dma_elem_t* src, lldesc_t* dma_desc, uint8_t* dst);
+static void IRAM_ATTR dma_filter_yuyv(const dma_elem_t* src, lldesc_t* dma_desc, uint8_t* dst);
+static void IRAM_ATTR dma_filter_yuyv_highspeed(const dma_elem_t* src, lldesc_t* dma_desc, uint8_t* dst);
+static void IRAM_ATTR dma_filter_jpeg(const dma_elem_t* src, lldesc_t* dma_desc, uint8_t* dst);
+static void IRAM_ATTR i2s_stop(bool* need_yield);
 
 static bool is_hs_mode()
 {
@@ -1377,3 +1377,4 @@ sensor_t * esp_camera_sensor_get()
     }
     return &s_state->sensor;
 }
+

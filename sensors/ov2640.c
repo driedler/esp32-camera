@@ -198,7 +198,7 @@ static int log_base2(int numerator, int denominator)
 #define MIN(a, b) ((a) < (b)) ?  (a) : (b)
 #define MAX(a, b) ((a) > (b)) ?  (a) : (b)
 
-static int set_pan_zoom(sensor_t *sensor, int zoom, int hpan, int vpan)
+static int set_pan_zoom(sensor_t *sensor, int scale, int zoom, int hpan, int vpan)
 {
     int ret;
     const framesize_t framesize = sensor->status.framesize;
@@ -210,11 +210,15 @@ static int set_pan_zoom(sensor_t *sensor, int zoom, int hpan, int vpan)
                               (framesize <= FRAMESIZE_SVGA) ? SVGA_HEIGHT :
                                                               UXGA_HEIGHT;
 
-
     const int log_div = 1; // log_base2(sensor_h, out_h);
     const int div = 1 << log_div;
 
-    const int sensor_max_scaled = ((sensor_h-1) >> log_div) & ~(div-1);
+    const int scale_step = ((sensor_h - out_h) * 100) / 10;
+    int scale_size = sensor_h - (scale_step * scale) / 100;
+
+    scale_size &= ~(4-1);
+
+    const int sensor_max_scaled = ((scale_size-1) >> log_div) & ~(div-1);
     const int target_step = ((sensor_max_scaled - out_h) * 100) / 10;
 
     int target_size = sensor_max_scaled - ((target_step * zoom) / 100);
@@ -229,8 +233,8 @@ static int set_pan_zoom(sensor_t *sensor, int zoom, int hpan, int vpan)
     int16_t x_off = (x_off_diff * 100) / 2;
     int16_t y_off = (y_off_diff * 100) / 2;
 
-    const int hpan_step = x_off / 5;
-    const int vpan_step = y_off / 5;
+    const int hpan_step = x_off / 10;
+    const int vpan_step = y_off / 10;
 
     // Rotate 90 deg clockwise
     int rot_hpan = vpan;

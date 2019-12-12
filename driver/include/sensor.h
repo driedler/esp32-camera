@@ -132,7 +132,7 @@ typedef struct _sensor {
     int  (*set_raw_gma)         (sensor_t *sensor, int enable);
     int  (*set_lenc)            (sensor_t *sensor, int enable);
 
-    int (*set_pan_zoom)         (sensor_t *sensor, int zoom, int hpan, int vpan);
+    int (*set_pan_zoom)         (sensor_t *sensor, int scale, int zoom, int hpan, int vpan);
     int (*set_output_size)      (sensor_t *sensor, uint16_t width, uint16_t height);
 } sensor_t;
 

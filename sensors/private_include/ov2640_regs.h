@@ -213,4 +213,48 @@ typedef enum {
 #define CLKRC_2X_SVGA       CLKRC_2X
 #define CLKRC_2X_CIF        CLKRC_2X
 
+
+#define VAL_SET(x, mask, rshift, lshift) ((((x) >> rshift) & mask) << lshift)
+
+#define CTRLI_V_DIV_SET(x)      VAL_SET(x, 0x3, 0, 3)
+#define CTRLI_H_DIV_SET(x)      VAL_SET(x, 0x3, 0, 0)
+
+#define SIZEL_HSIZE8_11_SET(x)  VAL_SET(x, 0x1, 11, 6)
+#define SIZEL_HSIZE8_SET(x)     VAL_SET(x, 0x7, 0, 3)
+#define SIZEL_VSIZE8_SET(x)     VAL_SET(x, 0x7, 0, 0)
+
+#define HSIZE8_SET(x)           VAL_SET(x, 0xFF, 3, 0)
+#define VSIZE8_SET(x)           VAL_SET(x, 0xFF, 3, 0)
+
+#define HSIZE_SET(x)            VAL_SET(x, 0xFF, 2, 0)
+#define VSIZE_SET(x)            VAL_SET(x, 0xFF, 2, 0)
+
+#define XOFFL_SET(x)            VAL_SET(x, 0xFF, 0, 0)
+#define YOFFL_SET(x)            VAL_SET(x, 0xFF, 0, 0)
+
+#define VHYX_VSIZE_SET(x)       VAL_SET(x, 0x1, (8+2), 7)
+#define VHYX_HSIZE_SET(x)       VAL_SET(x, 0x1, (8+2), 3)
+#define VHYX_YOFF_SET(x)        VAL_SET(x, 0x3, 8, 4)
+#define VHYX_XOFF_SET(x)        VAL_SET(x, 0x3, 8, 0)
+
+#define TEST_HSIZE_SET(x)       VAL_SET(x, 0x1, (9+2), 7)
+
+#define ZMOW_OUTW_SET(x)        VAL_SET(x, 0xFF, 2, 0)
+#define ZMOH_OUTH_SET(x)        VAL_SET(x, 0xFF, 2, 0)
+
+#define ZMHH_ZSPEED_SET(x)      VAL_SET(x, 0x0F, 0, 4)
+#define ZMHH_OUTH_SET(x)        VAL_SET(x, 0x1, (8+2), 2)
+#define ZMHH_OUTW_SET(x)        VAL_SET(x, 0x3, (8+2), 0)
+
+
+
+#define CIF_WIDTH           400
+#define CIF_HEIGHT          296
+
+#define SVGA_WIDTH          800
+#define SVGA_HEIGHT         600
+
+#define UXGA_WIDTH          1600
+#define UXGA_HEIGHT         1200
+
 #endif //__REG_REGS_H__

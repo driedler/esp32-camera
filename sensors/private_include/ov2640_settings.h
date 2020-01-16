@@ -238,6 +238,7 @@ const DRAM_ATTR uint8_t ov2640_settings_to_svga[][2] = {
 
     //Set the sensor output window
     {COM1, 0x0A},
+    //{0x0f, 0x4b},
     {REG32, REG32_SVGA},
     {HSTART, 0x11},
     {HSTOP, 0x43},

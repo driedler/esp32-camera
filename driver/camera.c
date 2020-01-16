@@ -131,13 +131,13 @@ static void IRAM_ATTR vsync_isr(void* arg);
 static void IRAM_ATTR i2s_isr(void* arg);
 static esp_err_t dma_desc_init();
 static void dma_desc_deinit();
-static void dma_filter_task(void *pvParameters);
-static void dma_filter_grayscale(const dma_elem_t* src, lldesc_t* dma_desc, uint8_t* dst);
-static void dma_filter_grayscale_highspeed(const dma_elem_t* src, lldesc_t* dma_desc, uint8_t* dst);
-static void dma_filter_yuyv(const dma_elem_t* src, lldesc_t* dma_desc, uint8_t* dst);
-static void dma_filter_yuyv_highspeed(const dma_elem_t* src, lldesc_t* dma_desc, uint8_t* dst);
-static void dma_filter_jpeg(const dma_elem_t* src, lldesc_t* dma_desc, uint8_t* dst);
-static void i2s_stop(bool* need_yield);
+static void IRAM_ATTR dma_filter_task(void *pvParameters);
+static void IRAM_ATTR dma_filter_grayscale(const dma_elem_t* src, lldesc_t* dma_desc, uint8_t* dst);
+static void IRAM_ATTR dma_filter_grayscale_highspeed(const dma_elem_t* src, lldesc_t* dma_desc, uint8_t* dst);
+static void IRAM_ATTR dma_filter_yuyv(const dma_elem_t* src, lldesc_t* dma_desc, uint8_t* dst);
+static void IRAM_ATTR dma_filter_yuyv_highspeed(const dma_elem_t* src, lldesc_t* dma_desc, uint8_t* dst);
+static void IRAM_ATTR dma_filter_jpeg(const dma_elem_t* src, lldesc_t* dma_desc, uint8_t* dst);
+static void IRAM_ATTR i2s_stop(bool* need_yield);
 
 static bool is_hs_mode()
 {
@@ -1212,13 +1212,15 @@ esp_err_t camera_init(const camera_config_t* config)
     }
 
     vsync_intr_disable();
-    gpio_install_isr_service(ESP_INTR_FLAG_LEVEL1 | ESP_INTR_FLAG_IRAM);
+    gpio_install_isr_service(ESP_INTR_FLAG_LEVEL3 | ESP_INTR_FLAG_IRAM);
     err = gpio_isr_handler_add(s_state->config.pin_vsync, &vsync_isr, NULL);
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "vsync_isr_handler_add failed (%x)", err);
         goto fail;
     }
 
+    s_state->sensor.status.output_size[0] = s_state->width;
+    s_state->sensor.status.output_size[1] = s_state->height;
     s_state->sensor.status.framesize = frame_size;
     s_state->sensor.pixformat = pix_format;
     ESP_LOGD(TAG, "Setting frame size to %dx%d", s_state->width, s_state->height);
@@ -1226,15 +1228,6 @@ esp_err_t camera_init(const camera_config_t* config)
         ESP_LOGE(TAG, "Failed to set frame size");
         err = ESP_ERR_CAMERA_FAILED_TO_SET_FRAME_SIZE;
         goto fail;
-    }
-
-    if(config->output_size[0] != 0 && config->output_size[1] != 0)
-    {
-        if (s_state->sensor.set_output_size(&s_state->sensor, config->output_size[0], config->output_size[1]) != 0) {
-            ESP_LOGE(TAG, "Failed to set output size");
-            err = ESP_ERR_CAMERA_FAILED_TO_SET_FRAME_SIZE;
-            goto fail;
-        }
     }
 
     s_state->sensor.set_pixformat(&s_state->sensor, pix_format);
@@ -1384,3 +1377,4 @@ sensor_t * esp_camera_sensor_get()
     }
     return &s_state->sensor;
 }
+

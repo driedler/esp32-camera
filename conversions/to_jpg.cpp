@@ -32,10 +32,10 @@ static const char* TAG = "to_bmp";
 
 static void *_malloc(size_t size)
 {
-    void * res = malloc(size);
-    if(res) {
-        return res;
-    }
+//    void * res = malloc(size);
+//    if(res) {
+//        return res;
+//    }
     return heap_caps_malloc(size, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
 }
 
@@ -205,7 +205,7 @@ bool fmt2jpg(uint8_t *src, size_t src_len, uint16_t width, uint16_t height, pixf
 {
     //todo: allocate proper buffer for holding JPEG data
     //this should be enough for CIF frame size
-    int jpg_buf_len = 64*1024;
+    int jpg_buf_len = 512*1024;
 
 
     uint8_t * jpg_buf = (uint8_t *)_malloc(jpg_buf_len);

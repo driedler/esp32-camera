@@ -25,7 +25,7 @@ set(COMPONENT_PRIV_INCLUDEDIRS
   conversions/private_include
   )
 
-set(COMPONENT_REQUIRES driver)
+set(COMPONENT_REQUIRES driver ledc_override)
 set(COMPONENT_PRIV_REQUIRES freertos)
 
 register_component()

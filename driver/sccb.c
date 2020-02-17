@@ -39,7 +39,7 @@ static uint8_t ESP_SLAVE_ADDR   = 0x3c;
 
 int SCCB_Init(int pin_sda, int pin_scl)
 {
-    ESP_LOGI(TAG, "pin_sda %d pin_scl %d\n", pin_sda, pin_scl);
+    ESP_LOGD(TAG, "pin_sda %d pin_scl %d", pin_sda, pin_scl);
 #ifdef CONFIG_SCCB_HARDWARE_I2C
     //log_i("SCCB_Init start");
     i2c_config_t conf;
@@ -142,17 +142,31 @@ uint8_t SCCB_Write(uint8_t slv_addr, uint8_t reg, uint8_t data)
 {
 #ifdef CONFIG_SCCB_HARDWARE_I2C
     esp_err_t ret = ESP_FAIL;
-    i2c_cmd_handle_t cmd = i2c_cmd_link_create();
-    i2c_master_start(cmd);
-    i2c_master_write_byte(cmd, ( ESP_SLAVE_ADDR << 1 ) | WRITE_BIT, ACK_CHECK_EN);
-    i2c_master_write_byte(cmd, reg, ACK_CHECK_EN);
-    i2c_master_write_byte(cmd, data, ACK_CHECK_EN);
-    i2c_master_stop(cmd);
-    ret = i2c_master_cmd_begin(SCCB_I2C_PORT, cmd, 1000 / portTICK_RATE_MS);
-    i2c_cmd_link_delete(cmd);
-    if(ret != ESP_OK) {
-        ESP_LOGE(TAG, "SCCB_Write Failed addr:0x%02x, reg:0x%02x, data:0x%02x, ret:%d", ESP_SLAVE_ADDR, reg, data, ret);
+
+    for(int i = 0; i < 3; ++i)
+    {
+        i2c_cmd_handle_t cmd = i2c_cmd_link_create();
+        i2c_master_start(cmd);
+        i2c_master_write_byte(cmd, ( ESP_SLAVE_ADDR << 1 ) | WRITE_BIT, ACK_CHECK_EN);
+        i2c_master_write_byte(cmd, reg, ACK_CHECK_EN);
+        i2c_master_write_byte(cmd, data, ACK_CHECK_EN);
+        i2c_master_stop(cmd);
+        ret = i2c_master_cmd_begin(SCCB_I2C_PORT, cmd, 1000 / portTICK_RATE_MS);
+        i2c_cmd_link_delete(cmd);
+
+        if(ret != ESP_OK)
+        {
+            if((ret == ESP_ERR_TIMEOUT) && (i < 2))
+            {
+                continue;
+            }
+
+            ESP_LOGE(TAG, "SCCB_Write Failed addr:0x%02x, reg:0x%02x, data:0x%02x, ret:%d", ESP_SLAVE_ADDR, reg, data, ret);
+        }
+
+        break;
     }
+
     return ret == ESP_OK ? 0 : -1;
 #else
     uint8_t ret=0;

@@ -96,6 +96,7 @@ typedef struct _sensor {
     pixformat_t pixformat;
     camera_status_t status;
     int xclk_freq_hz;
+    int pin_pwdn;
 
     // Sensor function pointers
     int  (*init_status)         (sensor_t *sensor);

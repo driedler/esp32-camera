@@ -943,6 +943,7 @@ esp_err_t camera_probe(const camera_config_t* config, camera_model_t* out_camera
     ESP_LOGD(TAG, "Initializing SSCB");
     SCCB_Init(config->pin_sscb_sda, config->pin_sscb_scl);
 	
+    s_state->sensor.pin_pwdn = config->pin_pwdn;
     if(config->pin_pwdn >= 0) {
         ESP_LOGD(TAG, "Resetting camera by power down line");
         gpio_config_t conf = { 0 };
@@ -968,13 +969,6 @@ esp_err_t camera_probe(const camera_config_t* config, camera_model_t* out_camera
         vTaskDelay(10 / portTICK_PERIOD_MS);
         gpio_set_level(config->pin_reset, 1);
         vTaskDelay(10 / portTICK_PERIOD_MS);
-#if (CONFIG_OV2640_SUPPORT && !CONFIG_OV3660_SUPPORT)
-    } else {
-        //reset OV2640
-        SCCB_Write(0x30, 0xFF, 0x01);//bank sensor
-        SCCB_Write(0x30, 0x12, 0x80);//reset
-        vTaskDelay(10 / portTICK_PERIOD_MS);
-#endif
     }
 
     ESP_LOGD(TAG, "Searching for camera address");
@@ -989,7 +983,7 @@ esp_err_t camera_probe(const camera_config_t* config, camera_model_t* out_camera
     s_state->sensor.xclk_freq_hz = config->xclk_freq_hz;
 
     //s_state->sensor.slv_addr = 0x30;
-    ESP_LOGD(TAG, "Detected camera at address=0x%02x", s_state->sensor.slv_addr);
+    ESP_LOGI(TAG, "Detected camera at address=0x%02x", s_state->sensor.slv_addr);
     sensor_id_t* id = &s_state->sensor.id;
 
 #if (CONFIG_OV2640_SUPPORT && CONFIG_OV3660_SUPPORT)
@@ -1016,7 +1010,7 @@ esp_err_t camera_probe(const camera_config_t* config, camera_model_t* out_camera
         id->MIDL = SCCB_Read(s_state->sensor.slv_addr, REG_MIDL);
         id->MIDH = SCCB_Read(s_state->sensor.slv_addr, REG_MIDH);
         vTaskDelay(10 / portTICK_PERIOD_MS);
-        ESP_LOGD(TAG, "Camera PID=0x%02x VER=0x%02x MIDL=0x%02x MIDH=0x%02x",
+        ESP_LOGI(TAG, "Camera PID=0x%02x VER=0x%02x MIDL=0x%02x MIDH=0x%02x",
                  id->PID, id->VER, id->MIDH, id->MIDL);
 #if CONFIG_OV3660_SUPPORT
     }
@@ -1054,6 +1048,15 @@ esp_err_t camera_probe(const camera_config_t* config, camera_model_t* out_camera
     s_state->sensor.reset(&s_state->sensor);
 
     return ESP_OK;
+}
+
+static void camera_deinit(void)
+{
+    if(s_state->sensor.pin_pwdn >= 0)
+    {
+        // carefull, logic is inverted compared to reset pin
+        gpio_set_level(s_state->sensor.pin_pwdn, 1);
+    }
 }
 
 esp_err_t camera_init(const camera_config_t* config)
@@ -1223,7 +1226,7 @@ esp_err_t camera_init(const camera_config_t* config)
     s_state->sensor.status.output_size[1] = s_state->height;
     s_state->sensor.status.framesize = frame_size;
     s_state->sensor.pixformat = pix_format;
-    ESP_LOGD(TAG, "Setting frame size to %dx%d", s_state->width, s_state->height);
+    ESP_LOGI(TAG, "Setting frame size to %dx%d", s_state->width, s_state->height);
     if (s_state->sensor.set_framesize(&s_state->sensor, frame_size) != 0) {
         ESP_LOGE(TAG, "Failed to set frame size");
         err = ESP_ERR_CAMERA_FAILED_TO_SET_FRAME_SIZE;
@@ -1251,6 +1254,7 @@ esp_err_t camera_init(const camera_config_t* config)
     return ESP_OK;
 
 fail:
+    camera_deinit();
     esp_camera_deinit();
     return err;
 }
@@ -1320,6 +1324,7 @@ esp_err_t esp_camera_deinit()
     }
     dma_desc_deinit();
     camera_fb_deinit();
+    camera_deinit();
     free(s_state);
     s_state = NULL;
     camera_disable_out_clock();

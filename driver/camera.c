@@ -926,6 +926,18 @@ static void IRAM_ATTR dma_filter_rgb888_highspeed(const dma_elem_t* src, lldesc_
  * Public Methods
  * */
 
+void camera_deinit(void)
+{
+    camera_disable_out_clock();
+    SCCB_Deinit();
+
+    if(s_state->sensor.pin_pwdn >= 0)
+    {
+        // carefull, logic is inverted compared to reset pin
+        gpio_set_level(s_state->sensor.pin_pwdn, 1);
+    }
+}
+
 esp_err_t camera_probe(const camera_config_t* config, camera_model_t* out_camera_model)
 {
     if (s_state != NULL) {
@@ -955,7 +967,7 @@ esp_err_t camera_probe(const camera_config_t* config, camera_model_t* out_camera
         gpio_set_level(config->pin_pwdn, 1);
         vTaskDelay(10 / portTICK_PERIOD_MS);
         gpio_set_level(config->pin_pwdn, 0);
-        vTaskDelay(10 / portTICK_PERIOD_MS);
+        vTaskDelay(20 / portTICK_PERIOD_MS);
     }
 
     if(config->pin_reset >= 0) {
@@ -976,7 +988,7 @@ esp_err_t camera_probe(const camera_config_t* config, camera_model_t* out_camera
     uint8_t slv_addr = SCCB_Probe();
     if (slv_addr == 0) {
         *out_camera_model = CAMERA_NONE;
-        camera_disable_out_clock();
+        camera_deinit();
         return ESP_ERR_CAMERA_NOT_DETECTED;
     }
     s_state->sensor.slv_addr = slv_addr;
@@ -1039,7 +1051,7 @@ esp_err_t camera_probe(const camera_config_t* config, camera_model_t* out_camera
     default:
         id->PID = 0;
         *out_camera_model = CAMERA_UNKNOWN;
-        camera_disable_out_clock();
+        camera_deinit();
         ESP_LOGE(TAG, "Detected camera not supported.");
         return ESP_ERR_CAMERA_NOT_SUPPORTED;
     }
@@ -1048,15 +1060,6 @@ esp_err_t camera_probe(const camera_config_t* config, camera_model_t* out_camera
     s_state->sensor.reset(&s_state->sensor);
 
     return ESP_OK;
-}
-
-static void camera_deinit(void)
-{
-    if(s_state->sensor.pin_pwdn >= 0)
-    {
-        // carefull, logic is inverted compared to reset pin
-        gpio_set_level(s_state->sensor.pin_pwdn, 1);
-    }
 }
 
 esp_err_t camera_init(const camera_config_t* config)
@@ -1293,7 +1296,7 @@ esp_err_t esp_camera_init(const camera_config_t* config)
 fail:
     free(s_state);
     s_state = NULL;
-    camera_disable_out_clock();
+    camera_deinit();
     return err;
 }
 
@@ -1327,7 +1330,6 @@ esp_err_t esp_camera_deinit()
     camera_deinit();
     free(s_state);
     s_state = NULL;
-    camera_disable_out_clock();
     periph_module_disable(PERIPH_I2S0_MODULE);
     return ESP_OK;
 }

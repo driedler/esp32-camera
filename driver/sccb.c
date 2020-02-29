@@ -58,6 +58,11 @@ int SCCB_Init(int pin_sda, int pin_scl)
     return 0;
 }
 
+void SCCB_Deinit(void)
+{
+    i2c_driver_delete(SCCB_I2C_PORT);
+}
+
 uint8_t SCCB_Probe()
 {
 #ifdef CONFIG_SCCB_HARDWARE_I2C

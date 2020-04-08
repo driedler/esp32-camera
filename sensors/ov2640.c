@@ -186,7 +186,7 @@ static int set_output_size(sensor_t *sensor, uint16_t width, uint16_t height)
     return ret;
 }
 
-
+#if 0
 static int log_base2(int numerator, int denominator)
 {
     const uint32_t tmp_div = numerator / denominator;
@@ -194,6 +194,7 @@ static int log_base2(int numerator, int denominator)
            (tmp_div < 4) ? 1 :
            (tmp_div < 8) ? 2 : 3;
 }
+#endif
 
 #define MIN(a, b) ((a) < (b)) ?  (a) : (b)
 #define MAX(a, b) ((a) > (b)) ?  (a) : (b)
